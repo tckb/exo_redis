@@ -1,21 +1,8 @@
 # ExoRedis
 
-**TODO: Add description**
+**Warn: Highly Experimental!**
 
-## Installation
+This is an attempt to implement a clone of redis-server in elixir. Loads of missing pieces here, I will add the missing pieces as soon as I get time. Until then,  _Here lies the dragons!_ do not use for anything else than going through the code. 
 
-If [available in Hex](https://hex.pm/docs/publish), the package can be installed
-by adding `exo_redis` to your list of dependencies in `mix.exs`:
 
-```elixir
-def deps do
-  [
-    {:exo_redis, "~> 0.1.0"}
-  ]
-end
-```
-
-Documentation can be generated with [ExDoc](https://github.com/elixir-lang/ex_doc)
-and published on [HexDocs](https://hexdocs.pm). Once published, the docs can
-be found at [https://hexdocs.pm/exo_redis](https://hexdocs.pm/exo_redis).
 
