@@ -3,7 +3,7 @@ defmodule ExoRedis.Profile do
 
   def do_analyze do
     profile do
-      ExoRedis.Command.Handler.handle_command(
+      ExoRedis.Command.Handler.process_command(
         "*3\r\n$3\r\nset\r\n$2\r\nk1\r\n$2\r\nv1\r\n"
       )
     end

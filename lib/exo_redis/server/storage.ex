@@ -33,7 +33,6 @@ defmodule ExoRedis.StorageProcess do
       :set,
       :named_table,
       :public
-      # read_concurrency: true
     ])
 
     {:ok, ets_table_name}
