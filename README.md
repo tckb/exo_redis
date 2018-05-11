@@ -15,7 +15,7 @@ This is an attempt to implement a clone of redis-server in elixir. Loads of miss
 
 ### result
 
-a 6% performance gain is noted
+~57% performance gain is noted
 
 ## Benchmark
 
