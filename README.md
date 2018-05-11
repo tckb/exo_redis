@@ -2,22 +2,29 @@
 
 **Warn: Highly Experimental!**
 
-This is an attempt to implement a clone of redis-server in elixir. Loads of missing pieces here, I will add the missing pieces as soon as I get time. Until then,  _Here lies the dragons!_ do not use for anything else than going through the code. 
+This is an attempt to implement a clone of redis-server in elixir. Loads of missing pieces here, I will add the missing pieces as soon as I get time. Until then,  _Here lies the dragons!_ do not use for anything else than going through the code.
+
+
+## Performance optimization - 1
+- removed external libraries for handling ets, used directly ets for fetching data
+- removed additional lookups while inserting data
+- added predefined "command_table" for looking up commands
+  - removed specs, process all such nonsense
+  - process_mods are pre-started, instead of lazily
+  - dynamic supervisor is now a normal supervisor that starts all the command processes while bootup
+
+### result
+
+a 6% performance gain is noted
 
 ## Benchmark
 
 ```
 ## Exo-Redis
-ubuntu@system:~$ redis-benchmark -t set,ping -n 1000000 -p 15000 -q
-PING_INLINE: 139236.98 requests per second <- fully optimized pings ;)
-PING_BULK: 138888.89 requests per second
-SET: 41481.73 requests per second <- this sucks but haven't optimized it
+ubuntu@system:~$ redis-benchmark -t set -n 1000000 -p 15000 -q
+SET: 65282.68 requests per second
 
 ## Redis Server
-ubuntu@system:~$ redis-benchmark -t set,ping -n 1000000  -q
-PING_INLINE: 134282.27 requests per second
-PING_BULK: 134210.17 requests per second
-SET: 137551.58 requests per second
+ubuntu@system:~$ redis-benchmark -t set -n 1000000 -q
+SET: 136184.12 requests per second
 ```
-
-

@@ -7,8 +7,6 @@ defmodule ExoRedis.Governer.Supervisor do
   end
 
   def init(args) do
-    datastore = MerklePatriciaTree.DB.ETS.init(@store_name)
-
     children = [
       {ExoRedis.Command.ProcessSupervisor,
        strategy: :rest_for_one, restart: :permanent},
@@ -20,7 +18,7 @@ defmodule ExoRedis.Governer.Supervisor do
       ),
       Supervisor.Spec.worker(
         ExoRedis.StorageProcess,
-        [datastore],
+        [@store_name],
         strategy: :one_for_one,
         restart: :permanent
       ),

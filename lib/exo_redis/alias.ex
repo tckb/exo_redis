@@ -9,6 +9,7 @@ defmodule Alias do
       alias ExoRedis.RESP.ProtocolError, as: ProtocolError
       alias ExoRedis.RESP.Parser, as: ProtocolParser
       alias ExoRedis.StorageProcess, as: InternalStorage
+      alias ExoRedis.Commands, as: CommandList
     end
   end
 end

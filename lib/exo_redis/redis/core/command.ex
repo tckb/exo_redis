@@ -7,37 +7,32 @@ defmodule ExoRedis.Command.Handler do
   require Logger
   use Alias
 
-  def handle_command(raw_command) do
-    Logger.debug(fn -> "Handling  #{raw_command} " end)
-
+  def process_command(raw_command) when is_binary(raw_command) do
     try do
       raw_command
       |> parse_command
-      |> is_valid?
+      |> validate_command!()
       |> CommandProcess.process_command()
     rescue
-      error ->
-        error
-        |> parse_error()
+      error -> error |> pack_error()
     end
   end
 
-  # this guys raises protocol errors
   defp parse_command(raw_command) do
     Logger.debug(fn -> "parsing  #{raw_command} " end)
 
     case ProtocolParser.parse(raw_command) do
       {:ok, command, _} when is_binary(command) ->
         Logger.debug(fn -> "Got Command  #{command} " end)
-        {:ok, %Command{command: command, args: []}}
+        {:ok, %Command{command: command |> String.upcase(), args: []}}
 
       {:ok, [command], _} ->
         Logger.debug(fn -> "Got Command  #{command} " end)
-        {:ok, %Command{command: command, args: []}}
+        {:ok, %Command{command: command |> String.upcase(), args: []}}
 
       {:ok, [command | args], _} ->
         Logger.debug(fn -> "Got Command+args  #{command} #{args}" end)
-        {:ok, %Command{command: command, args: args}}
+        {:ok, %Command{command: command |> String.upcase(), args: args}}
 
       {:continuation, _} ->
         {:error, %ProtocolError{message: "Unexpected EOD"}}
@@ -48,34 +43,15 @@ defmodule ExoRedis.Command.Handler do
     end
   end
 
-  defp is_valid?({:ok, %Command{command: command, args: args} = cmd}) do
-    Logger.debug(fn -> "validating  #{inspect(cmd)} " end)
-
-    case CommandSpec.get_spec(command) do
-      {:ok, command_spec} ->
+  defp validate_command!({:ok, %Command{command: command, args: args} = cmd}) do
+    case CommandList.command_spec(command) do
+      {:ok, {min_args, is_arg_required, process_module}} ->
         args_length = length(args)
-        specs_length = command_spec.min_required_args()
 
-        # we are going a bit strict on the argument check here, redis is a bit linient on this
-        if (command_spec.args_required && args_length >= specs_length) ||
-             (!command_spec.args_required && args_length == specs_length) do
-          case command_spec.process_mod
-               |> CommandProcess.spawn_command_process(cmd) do
-            {:ok, cmd_process} ->
-              Logger.debug(fn -> "is_valid: #{inspect(cmd_process)}" end)
-
-              cmd_process
-
-            {:error, _} ->
-              Logger.debug(fn ->
-                "No CommandHandler exists for #{command}"
-              end)
-
-              raise %Error{
-                type: "Err",
-                message: Error.err_msg(:wrong_command, command)
-              }
-          end
+        if (is_arg_required && args_length >= min_args) ||
+             (!is_arg_required && args_length == min_args) do
+          # this is what we expect
+          {process_module, cmd}
         else
           raise %Error{
             type: "Err",
@@ -83,32 +59,35 @@ defmodule ExoRedis.Command.Handler do
           }
         end
 
-      {:error, %Error{} = spec_error} ->
-        raise spec_error
+      {:error, _} ->
+        raise %Error{
+          type: "Err",
+          message: Error.err_msg(:wrong_command, command)
+        }
     end
   end
 
-  defp is_valid?({error, some_error}) do
+  defp validate_command!({:error, some_error}) do
     raise some_error
   end
 
-  defp parse_error(%ProtocolError{} = err) do
+  defp pack_error(%ProtocolError{} = err) do
     err
     |> ProtocolPacker.pack()
   end
 
-  defp parse_error(%Error{} = err) do
+  defp pack_error(%Error{} = err) do
     err
     |> ProtocolPacker.pack()
   end
 
-  defp parse_error(some_error) do
+  defp pack_error(some_error) do
     Logger.error(fn -> "Unexpected error  #{inspect(some_error)}" end)
 
     %Error{
       type: "Err",
       message: "Unexpected error"
     }
-    |> parse_error
+    |> pack_error
   end
 end

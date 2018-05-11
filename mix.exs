@@ -27,7 +27,6 @@ defmodule ExoRedis.Mixfile do
       {:bitmap, "~> 1.0.1"},
       {:merkle_patricia_tree, "~> 0.2.6"},
       {:zset, "~> 0.1.0"},
-      {:xprof, "~> 1.3.0", override: true},
       {:credo, "~> 0.9.1", only: [:dev, :test], runtime: false},
       {:distillery, "~> 1.5", runtime: false},
       {:exprof, "~> 0.2.3", runtime: false},

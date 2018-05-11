@@ -81,7 +81,7 @@ defmodule ExoRedis.Server.GenServerHandler do
 
     resp =
       input
-      |> CmdHandler.handle_command()
+      |> CmdHandler.process_command()
 
     Logger.debug(fn ->
       "#{inspect(input)} -> #{resp |> IO.iodata_to_binary() |> inspect}"
@@ -102,93 +102,3 @@ defmodule ExoRedis.Server.GenServerHandler do
     {:stop, :normal, state}
   end
 end
-
-#
-# defmodule ExoRedis.Server.SimpleHandler do
-#  alias ExoRedis.Command.Handler, as: CmdHandler
-#
-#  def start_link(ref, socket, transport, opts) do
-#    pid =
-#      :proc_lib.spawn_link(__MODULE__, :init, [ref, socket, transport, opts])
-#
-#    {:ok, pid}
-#  end
-#
-#  def init(ref, socket, transport, _Opts = []) do
-#    :ok = :ranch.accept_ack(ref)
-#    :ok = transport.setopts(socket, [{:nodelay, true}, {:reuseaddr, true}])
-#    loop(socket, transport)
-#  end
-#
-#  def loop(socket, transport) do
-#    case transport.recv(socket, 0, 5000) do
-#      {:ok, input} ->
-#        resp =
-#          input
-#          |> CmdHandler.handle_command()
-#
-#        transport.send(socket, resp)
-#        loop(socket, transport)
-#
-#      {:error, :closed} ->
-#        :ok = transport.close(socket)
-#
-#      {:error, :timeout} ->
-#        :ok = transport.close(socket)
-#
-#      # err_message
-#      {:error, _} ->
-#        :ok = transport.close(socket)
-#    end
-#  end
-# end
-# defmodule ExoRedis.Server.SimpleHandler2 do
-#  alias ExoRedis.Command.Handler, as: CmdHandler
-#
-#  def start_link(ref, socket, transport, opts) do
-#    responder_pid = spawn_link(__MODULE__, :responder, [socket, transport])
-#
-#    pid =
-#      :proc_lib.spawn_link(__MODULE__, :init, [
-#        ref,
-#        socket,
-#        transport,
-#        responder_pid
-#      ])
-#
-#    {:ok, pid}
-#  end
-#
-#  def responder(socket, transport) do
-#    receive do
-#      {:message, packet} ->
-#        # resp = packet |> CmdHandler.handle_command()
-#        transport.send(socket, [43, "PONG", "\r\n"])
-#        responder(socket, transport)
-#    end
-#  end
-#
-#  def init(ref, socket, transport, responder_pid) do
-#    :ok = :ranch.accept_ack(ref)
-#    :ok = transport.setopts(socket, [{:nodelay, true}, {:reuseaddr, true}])
-#    loop(socket, transport, responder_pid)
-#  end
-#
-#  def loop(socket, transport, responder) do
-#    case transport.recv(socket, 0, 5000) do
-#      {:ok, input} ->
-#        send(responder, {:message, input})
-#        loop(socket, transport, responder)
-#
-#      {:error, :closed} ->
-#        :ok = transport.close(socket)
-#
-#      {:error, :timeout} ->
-#        :ok = transport.close(socket)
-#
-#      # err_message
-#      {:error, _} ->
-#        :ok = transport.close(socket)
-#    end
-#  end
-# end

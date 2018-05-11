@@ -10,7 +10,7 @@ defmodule ExoRedis.ServerKickStarter do
            :exo_redis_server,
            # reference of the server
            # acceptor pool
-           100,
+           @connection_acceptor_pool_size,
            # TCP protocol handler, default from 'ranch'
            :ranch_tcp,
            [port: @listen_port],

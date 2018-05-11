@@ -1,29 +1,26 @@
 defmodule ExoRedis.Command.Process do
   use Alias
   require Logger
-  @callback process_command_args(list(any())) :: any()
 
   ####### Client Apis
 
-  def spawn_command_process(
-        process_mod,
-        %Command{command: cmd} = command
-      ) do
-    Logger.debug(fn -> "#{cmd} spawned #{process_mod}" end)
-
-    {process_mod, command}
-    |> start_link
-  end
-
-  def process_command(
-        {process_mod, %Command{command: command, args: args} = process_command}
-      ) do
-    Logger.debug(fn -> "#{inspect(process_mod)} handle_command #{command}" end)
+  def process_command({process_mod, %Command{} = process_command}) do
+    Logger.debug(fn ->
+      "process_command #{inspect(process_mod)} #{inspect(process_command)}"
+    end)
 
     call_process_command({process_mod, process_command})
   end
 
   ###### Internal Apis
+
+  defp call_process_command({mod, command}) do
+    Logger.debug(fn -> "#{mod} call_process_command #{inspect(command)}" end)
+    GenServer.call(mod, {:command_invoked, command})
+  end
+
+  ## macro starts
+  @callback process_command_args(list(any())) :: any()
 
   defmacro __using__(_) do
     quote do
@@ -64,84 +61,72 @@ defmodule ExoRedis.Command.Process do
         end
       end
 
+      @doc """
+      stores the k,v data
+      """
       def store(key, data) do
         store(key, data, %{expiry: [-1, 0], flag: :set})
       end
 
-      def store(
-            key,
-            data,
-            %{expiry: [seconds, mills], flag: set_flag} = additional_data
-          ) do
+      @doc """
+        stores the k,v pair based on the flag
+      """
+      def store(key, data, %{expiry: [seconds, mills], flag: set_flag}) do
         Logger.debug(fn ->
-          "store: #{key} -> #{inspect(data)} additional_data: #{
-            inspect(additional_data)
+          "store: #{key} -> #{inspect(data)} expiry: #{seconds}.#{mills} :: #{
+            set_flag
           }"
         end)
 
-        response = exits?(key)
+        case set_flag do
+          :set ->
+            # if this is set, then we don't care if the data exists or not, just set the data
+            InternalStorage.put_data(key, {__MODULE__, data}, [
+              seconds,
+              mills
+            ])
 
-        case response do
-          {:ok, :key_exits} ->
-            case set_flag do
-              :set ->
+            {:ok, :success}
+
+          :set_if_exists ->
+            # sets only if the key exists!
+            case exits?(key) do
+              # key is present
+              :key_exits ->
                 InternalStorage.put_data(key, {__MODULE__, data}, [
                   seconds,
                   mills
                 ])
 
-                {:ok, :key_exits}
+                {:ok, :success}
 
-              :set_if_exists ->
-                InternalStorage.put_data(key, {__MODULE__, data}, [
-                  seconds,
-                  mills
-                ])
-
-                {:ok, :key_exits}
-
-              :set_if_not_exists ->
+              # anything else
+              _ ->
                 {:error, :flag_failed}
             end
 
-          {:error, :key_missing} ->
-            case set_flag do
-              :set ->
+          :set_if_not_exists ->
+            # sets only if the key doesn't exist
+            case exits?(key) do
+              # key doesn't exists
+              :key_missing ->
                 InternalStorage.put_data(key, {__MODULE__, data}, [
                   seconds,
                   mills
                 ])
 
-                {:ok, :key_missing}
+                {:ok, :success}
 
-              :set_if_exists ->
+              # anything else
+              _ ->
                 {:error, :flag_failed}
-
-              :set_if_not_exists ->
-                InternalStorage.put_data(key, {__MODULE__, data}, [
-                  seconds,
-                  mills
-                ])
-
-                {:ok, :key_missing}
-            end
-
-          _ ->
-            response
-        end
-      end
-
-      defp exits?(key) do
-        case InternalStorage.is_key_present?(key) do
-          {:ok, flag} ->
-            if(flag) do
-              {:ok, :key_exits}
-            else
-              {:error, :key_missing}
             end
         end
       end
 
+      @doc """
+       fetches the key data
+      """
       def retrieve(key) do
         case InternalStorage.get_data(key) do
           {:ok, {owner_type, data}} ->
@@ -155,36 +140,17 @@ defmodule ExoRedis.Command.Process do
             {:error, :key_missing}
         end
       end
+
+      defp exits?(key) do
+        case InternalStorage.is_key_present?(key) do
+          {:ok, flag} ->
+            if(flag) do
+              :key_exits
+            else
+              :key_missing
+            end
+        end
+      end
     end
-  end
-
-  defp start_link({mod, _} = process_command) do
-    mod_pid = Process.whereis(mod)
-
-    Logger.debug(fn ->
-      "#{mod} start_link #{mod} mod_pid #{inspect(mod_pid)}"
-    end)
-
-    case mod_pid do
-      nil ->
-        {:ok, pid} = Command.ProcessSupervisor.register_command_processor(mod)
-
-        Logger.debug(fn -> "#{mod} is running on #{inspect(pid)}" end)
-
-      pid ->
-        Logger.debug(fn -> "#{mod} is running on #{inspect(pid)}" end)
-    end
-
-    {:ok, process_command}
-  end
-
-  defp start_link([]) do
-    {:error, "can't start"}
-  end
-
-  defp call_process_command({mod, command}) do
-    Logger.debug(fn -> "#{mod} call_process_command #{inspect(command)}" end)
-
-    GenServer.call(mod, {:command_invoked, command})
   end
 end

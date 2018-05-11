@@ -1,5 +1,4 @@
 defmodule ExoRedis.StorageProcess.GC do
-  alias MerklePatriciaTree.DB, as: DB
   use GenServer
   require Logger
 
@@ -9,7 +8,7 @@ defmodule ExoRedis.StorageProcess.GC do
   @sweep_interval Application.get_env(:exo_redis, :gc_mark_cycle)
   # this full sweep will do a full table scan for marking items to expire
   @full_scan_marker_interval Application.get_env(:exo_redis, :gc_sweep_cycle)
-
+  # the selector used for fetching the keys that are about to be evicted
   @expired_keys_selector [
     {
       {:"$1", %{status: :to_be_evicted, ttl: :_, value: :_}},
@@ -17,7 +16,7 @@ defmodule ExoRedis.StorageProcess.GC do
       [:"$1"]
     }
   ]
-
+  # the selector for fetching only live entries
   @live_key_selector [
     {
       {:"$1", %{status: :"$2", ttl: :"$4", value: :"$3"}},

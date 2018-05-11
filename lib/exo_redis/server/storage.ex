@@ -1,7 +1,4 @@
 defmodule ExoRedis.StorageProcess do
-  alias MerklePatriciaTree.DB, as: DB
-  alias ExoRedis.StorageProcess.GC, as: StorageGC
-
   use GenServer
   require Logger
   @status_mark_for_eviction :to_be_evicted
@@ -30,21 +27,27 @@ defmodule ExoRedis.StorageProcess do
 
   ########
 
-  def init(datastore) do
+  def init(ets_table_name) do
     # use ETS backed datastore, its easier for lookups
-    :ets.new(:metadata, [:set, :named_table, :public])
-    {:ok, datastore}
+    :ets.new(ets_table_name, [
+      :set,
+      :named_table,
+      :public
+      # read_concurrency: true
+    ])
+
+    {:ok, ets_table_name}
   end
 
   @doc """
    for now, we follow a lazy cache cleaning
   """
-  def handle_call({:get, key}, _from, datastore) do
-    keyval = DB.get(datastore, key)
+  def handle_call({:get, key}, _from, ets_table_name) do
+    keyval = ets_get(ets_table_name, key)
 
     case keyval do
       :not_found ->
-        {:reply, {:error, :not_found}, datastore}
+        {:reply, {:error, :not_found}, ets_table_name}
 
       {:ok, data} ->
         #  oh oh , evict the key
@@ -53,41 +56,27 @@ defmodule ExoRedis.StorageProcess do
             if ttl_epoch <= :os.system_time(:milli_seconds) do
               Logger.debug(fn -> "marking #{key} for eviction" end)
 
-              # no ttl, this is already expired
-              status =
-                DB.put!(datastore, key, %{
-                  value: data.value,
-                  status: @status_mark_for_eviction,
-                  ttl: 0
-                })
+              # mark for eviction
+              ets_put!(ets_table_name, key, %{
+                value: data.value,
+                status: @status_mark_for_eviction,
+                ttl: 0
+              })
 
-              case status do
-                # say this is not found
-                :ok ->
-                  {
-                    :reply,
-                    {:error, :not_found},
-                    datastore
-                  }
-
-                _ ->
-                  Logger.error(
-                    "Unable to update eviction status for key #{key}, status: #{
-                      status
-                    }"
-                  )
-
-                  {:reply, {:error, :not_found}, datastore}
-              end
+              {
+                :reply,
+                {:error, :not_found},
+                ets_table_name
+              }
             else
-              {:reply, {:ok, value}, datastore}
+              {:reply, {:ok, value}, ets_table_name}
             end
 
           %{value: value, status: @status_alive_perpetuity, ttl: _} ->
-            {:reply, {:ok, value}, datastore}
+            {:reply, {:ok, value}, ets_table_name}
 
-          %{value: value, status: @status_mark_for_eviction, ttl: _} ->
-            {:reply, {:error, :not_found}, datastore}
+          %{value: _, status: @status_mark_for_eviction, ttl: _} ->
+            {:reply, {:error, :not_found}, ets_table_name}
         end
     end
   end
@@ -95,61 +84,58 @@ defmodule ExoRedis.StorageProcess do
   def handle_call(
         {:put, key, value, [ttl_seconds, ttl_milli_seconds] = ttl},
         _from,
-        datastore
+        ets_table_name
       )
       when ttl_seconds > 0 and ttl_milli_seconds >= 0 do
-    status =
-      DB.put!(datastore, key, %{
-        value: value,
-        status: @status_alive,
-        ttl: ttl_epoch(ttl)
-      })
+    ets_put!(ets_table_name, key, %{
+      value: value,
+      status: @status_alive,
+      ttl: ttl_epoch(ttl)
+    })
 
-    case status do
-      :ok -> {:reply, :ok, datastore}
-      _ -> {:reply, {:error, status}, datastore}
-    end
+    {:reply, :ok, ets_table_name}
   end
 
-  def handle_call({:put, key, value, [-1, 0]}, _from, datastore) do
-    status =
-      DB.put!(datastore, key, %{
-        value: value,
-        status: @status_alive_perpetuity,
-        ttl: :infinity
-      })
+  def handle_call({:put, key, value, [_, _]}, _from, ets_table_name) do
+    ets_put!(ets_table_name, key, %{
+      value: value,
+      status: @status_alive_perpetuity,
+      ttl: :infinity
+    })
 
-    case status do
-      :ok -> {:reply, :ok, datastore}
-      _ -> {:reply, {:error, status}, datastore}
-    end
+    {:reply, :ok, ets_table_name}
   end
 
-  def handle_call({:put, _, _, _}, _from, datastore) do
-    {:reply, {:error, "bad value"}, datastore}
+  def handle_call({:put, _, _, _}, _from, ets_table_name) do
+    {:reply, {:error, "bad value"}, ets_table_name}
   end
 
-  def handle_call({:check_member, key}, _from, datastore) do
-    {:reply, {:ok, :ets.member(:internal_store, key)}, datastore}
+  def handle_call({:check_member, key}, _from, ets_table_name) do
+    {:reply, {:ok, :ets.member(:internal_store, key)}, ets_table_name}
   end
 
-  def handle_call({:remove, key}, _from, datastore) do
-    data = DB.get(datastore, key)
-
-    case data do
-      :not_found ->
-        {:reply, {:error, :not_found}, datastore}
-
-      {:ok, value} ->
-        status = :ets.delete(datastore, key)
-
-        case status do
-          true -> {:reply, {:ok, status}, datastore}
-          _ -> {:reply, {:error, status}, datastore}
-        end
+  def handle_call({:remove, key}, _from, ets_table_name) do
+    if :ets.member(:internal_store, key) do
+      :ets.delete(ets_table_name, key)
+      {:reply, {:ok, true}, ets_table_name}
+    else
+      {:reply, {:error, :not_found}, ets_table_name}
     end
   end
 
   def ttl_epoch([ttl_seconds, ttl_milli_seconds]),
     do: :os.system_time(:milli_seconds) + ttl_seconds * 1000 + ttl_milli_seconds
+
+  defp ets_get(db_ref, key) do
+    case :ets.lookup(db_ref, key) do
+      [{^key, v} | _rest] -> {:ok, v}
+      _ -> :not_found
+    end
+  end
+
+  defp ets_put!(db_ref, key, value) do
+    case :ets.insert(db_ref, {key, value}) do
+      true -> :ok
+    end
+  end
 end

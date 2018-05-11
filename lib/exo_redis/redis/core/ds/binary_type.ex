@@ -9,6 +9,7 @@ defmodule ExoRedis.Command.Process.Binary do
   require Logger
 
   @wrong_type_error %Error{type: "Err", message: Error.err_msg(:wrong_type)}
+  @ok "OK"
 
   def init(args) do
     {:ok, args}
@@ -16,7 +17,7 @@ defmodule ExoRedis.Command.Process.Binary do
 
   ####### Retrieval Operations
 
-  def process_command_args("GET", [key | rest]) do
+  def process_command_args("GET", [key | _]) do
     case retrieve(key) do
       {:ok, data} ->
         data
@@ -29,15 +30,11 @@ defmodule ExoRedis.Command.Process.Binary do
     end
   end
 
-  def process_command_args("GET", [_]) do
-    %Error{
-      type: "Err",
-      message: Error.err_msg(:wrong_args, "GET")
-    }
-  end
-
   def process_command_args("SET", [key, value]) do
-    process_command_args("SET", [key, value, ""])
+    case store(key, value) do
+      {:ok, _} -> @ok
+      {:error, :flag_failed} -> :null_array
+    end
   end
 
   def process_command_args("SET", [key, value | optional_flags]) do
@@ -49,9 +46,8 @@ defmodule ExoRedis.Command.Process.Binary do
 
       _ ->
         case store(key, value, flags) do
-          {:error, :key_type_error} -> @wrong_type_error
+          {:ok, _} -> @ok
           {:error, :flag_failed} -> :null_array
-          {:ok, _} -> "OK"
         end
     end
   end
@@ -87,7 +83,7 @@ defmodule ExoRedis.Command.Process.Binary do
   end
 
   defp process_optional_flags(["EX", seconds, "PX", mills]) do
-    process_optional_flags(["EX", seconds, "PX", "0", ""])
+    process_optional_flags(["EX", seconds, "PX", mills, ""])
   end
 
   defp process_optional_flags(["EX", seconds, flag]) do
@@ -107,8 +103,7 @@ defmodule ExoRedis.Command.Process.Binary do
   end
 
   ####### Bit Operations
-
-  def process_command_args("GETBIT", [key, position | rest]) do
+  def process_command_args("GETBIT", [key, position | _]) do
     Logger.debug(fn -> "GETBIT" <> key <> position end)
 
     try do
@@ -135,7 +130,7 @@ defmodule ExoRedis.Command.Process.Binary do
     }
   end
 
-  def process_command_args("SETBIT", [key, position, flag | rest])
+  def process_command_args("SETBIT", [key, position, flag | _])
       when flag == "1" or flag == "0" do
     try do
       position = String.to_integer(position)
@@ -148,7 +143,7 @@ defmodule ExoRedis.Command.Process.Binary do
             {:error, some_error} ->
               %Error{type: "Err", message: some_error}
 
-            {:ok, value} ->
+            {:ok, _} ->
               old_bit
           end
 
@@ -163,7 +158,7 @@ defmodule ExoRedis.Command.Process.Binary do
             {:error, some_error} ->
               %Error{type: "Err", message: some_error}
 
-            {:ok, value} ->
+            {:ok, _} ->
               old_bit
           end
       end
@@ -207,9 +202,7 @@ defmodule ExoRedis.Command.Process.Binary do
     end
   end
 
-  @doc """
-  resizing to fit the data, padding the original data with NUL bytes, i.e., <<0>>
-  """
+  # resizing to fit the data, padding the original data with NUL bytes, i.e., <<0>>
   defp set_bit(string_data, position, bit_flag)
        when (bit_flag == "1" or bit_flag == "0") and is_number(position) and
               is_binary(string_data) and position > 0 and
@@ -224,9 +217,7 @@ defmodule ExoRedis.Command.Process.Binary do
     |> set_bit(position, bit_flag)
   end
 
-  @doc """
-   find the next (ceil) power of 2
-  """
+  # find the next (ceil) power of 2
   defp next_power_of_2(num, power \\ 2) do
     num = num >>> 1
 
@@ -240,9 +231,8 @@ defmodule ExoRedis.Command.Process.Binary do
     end
   end
 
-  @doc """
-   append <<0>> bytes
-  """
+  # append <<0>> bytes
+
   defp append_empty_bytes(original_data, total_bytes_to_append)
        when total_bytes_to_append > 0 do
     append_empty_bytes(
