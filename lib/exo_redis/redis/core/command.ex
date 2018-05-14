@@ -24,15 +24,17 @@ defmodule ExoRedis.Command.Handler do
     case ProtocolParser.parse(raw_command) do
       {:ok, command, _} when is_binary(command) ->
         Logger.debug(fn -> "Got Command  #{command} " end)
-        {:ok, %Command{command: command |> String.upcase(), args: []}}
+        {:ok, %Command{command: command |> ExoRedis.Util.downcase(), args: []}}
 
       {:ok, [command], _} ->
         Logger.debug(fn -> "Got Command  #{command} " end)
-        {:ok, %Command{command: command |> String.upcase(), args: []}}
+        {:ok, %Command{command: command |> ExoRedis.Util.downcase(), args: []}}
 
       {:ok, [command | args], _} ->
         Logger.debug(fn -> "Got Command+args  #{command} #{args}" end)
-        {:ok, %Command{command: command |> String.upcase(), args: args}}
+
+        {:ok,
+         %Command{command: command |> ExoRedis.Util.downcase(), args: args}}
 
       {:continuation, _} ->
         {:error, %ProtocolError{message: "Unexpected EOD"}}

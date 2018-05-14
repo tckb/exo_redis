@@ -17,7 +17,7 @@ defmodule ExoRedis.Command.Process.Binary do
 
   ####### Retrieval Operations
 
-  def process_command_args("GET", [key | _]) do
+  def process_command_args("get", [key | _]) do
     case retrieve(key) do
       {:ok, data} ->
         data
@@ -30,14 +30,14 @@ defmodule ExoRedis.Command.Process.Binary do
     end
   end
 
-  def process_command_args("SET", [key, value]) do
+  def process_command_args("set", [key, value]) do
     case store(key, value) do
       {:ok, _} -> @ok
       {:error, :flag_failed} -> :null_array
     end
   end
 
-  def process_command_args("SET", [key, value | optional_flags]) do
+  def process_command_args("set", [key, value | optional_flags]) do
     flags = process_optional_flags(optional_flags)
 
     case flags do
@@ -103,8 +103,8 @@ defmodule ExoRedis.Command.Process.Binary do
   end
 
   ####### Bit Operations
-  def process_command_args("GETBIT", [key, position | _]) do
-    Logger.debug(fn -> "GETBIT" <> key <> position end)
+  def process_command_args("getbit", [key, position | _]) do
+    Logger.debug(fn -> "getbit" <> key <> position end)
 
     try do
       position = String.to_integer(position)
@@ -123,14 +123,14 @@ defmodule ExoRedis.Command.Process.Binary do
     end
   end
 
-  def process_command_args("GETBIT", [_]) do
+  def process_command_args("getbit", [_]) do
     %Error{
       type: "Err",
-      message: Error.err_msg(:wrong_args, "GETBIT")
+      message: Error.err_msg(:wrong_args, "getbit")
     }
   end
 
-  def process_command_args("SETBIT", [key, position, flag | _])
+  def process_command_args("setbit", [key, position, flag | _])
       when flag == "1" or flag == "0" do
     try do
       position = String.to_integer(position)
@@ -171,10 +171,10 @@ defmodule ExoRedis.Command.Process.Binary do
     end
   end
 
-  def process_command_args("SETBIT", [_]) do
+  def process_command_args("setbit", [_]) do
     %Error{
       type: "Err",
-      message: Error.err_msg(:wrong_args, "SETBIT")
+      message: Error.err_msg(:wrong_args, "setbit")
     }
   end
 

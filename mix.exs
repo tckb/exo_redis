@@ -30,7 +30,9 @@ defmodule ExoRedis.Mixfile do
       {:distillery, "~> 1.5", runtime: false},
       {:exprof, "~> 0.2.3", runtime: false},
       {:benchee, "~> 0.13.0", runtime: false},
-      {:benchwarmer, "~> 0.0.2", runtime: false}
+      {:benchee_html, "~> 0.4", only: :dev},
+      {:benchwarmer, "~> 0.0.2", runtime: false},
+      {:xxhash, "~> 0.2.0", hex: :erlang_xxhash}
     ]
   end
 end
