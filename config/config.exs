@@ -5,7 +5,7 @@ use Mix.Config
 config :exo_redis,
   # Server settings
   port: 15000,
-  accept_pool: 50,
+  accept_pool: 2,
   rdb_file: "/path/to/file",
   # mark scans the entire table so beware of this!
   gc_mark_cycle: 500_000,

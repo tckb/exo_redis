@@ -31,7 +31,9 @@ defmodule ExoRedis.Profile do
         "downcase - stdlib" => fn string ->
           String.downcase(string, :ascii)
         end,
-        "downcase - pattern_match" => fn string -> downcase_ascii_patternMatch(string) end
+        "downcase - pattern_match" => fn string ->
+          downcase_ascii_patternMatch(string)
+        end
       },
       warmup: 5,
       time: 10,
@@ -59,7 +61,9 @@ defmodule ExoRedis.Profile do
         "downcase_ascii_iodata" => fn string ->
           downcase_ascii_iodata(string)
         end,
-        "downcase_ascii_patternMatch" => fn string -> downcase_ascii_patternMatch(string) end
+        "downcase_ascii_patternMatch" => fn string ->
+          downcase_ascii_patternMatch(string)
+        end
       },
       warmup: 3,
       time: 10,

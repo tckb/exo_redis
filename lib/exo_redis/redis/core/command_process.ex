@@ -81,10 +81,15 @@ defmodule ExoRedis.Command.Process do
         case set_flag do
           :set ->
             # if this is set, then we don't care if the data exists or not, just set the data
-            InternalStorage.put_data(key, {__MODULE__, data}, [
-              seconds,
-              mills
-            ])
+            InternalStorage.put_data(
+              key,
+              {__MODULE__, data},
+              [
+                seconds,
+                mills
+              ],
+              :async
+            )
 
             {:ok, :success}
 
@@ -129,26 +134,16 @@ defmodule ExoRedis.Command.Process do
       """
       def retrieve(key) do
         case InternalStorage.get_data(key) do
-          {:ok, {owner_type, data}} ->
-            if owner_type == __MODULE__ do
-              {:ok, data}
-            else
-              {:error, :key_type_error}
-            end
-
-          {:error, :not_found} ->
-            {:error, :key_missing}
+          {:ok, {__MODULE__, data}} -> {:ok, data}
+          {:error, :not_found} -> {:error, :key_missing}
+          _ -> {:error, :key_type_error}
         end
       end
 
       defp exits?(key) do
         case InternalStorage.is_key_present?(key) do
-          {:ok, flag} ->
-            if(flag) do
-              :key_exits
-            else
-              :key_missing
-            end
+          {:ok, true} -> :key_exits
+          {:ok, false} -> :key_missing
         end
       end
     end

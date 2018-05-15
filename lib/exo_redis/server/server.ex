@@ -7,19 +7,22 @@ defmodule ExoRedis.ServerKickStarter do
 
   def start_link(state \\ []) do
     case :ranch.start_listener(
-           :exo_redis_server,
            # reference of the server
+           :exo_redis_server,
            # acceptor pool
            @connection_acceptor_pool_size,
            # TCP protocol handler, default from 'ranch'
            :ranch_tcp,
-           [port: @listen_port],
+           [
+             {:port, @listen_port},
+             {:max_connections, :infinity}
+           ],
            # this is the connection, well technically this is a "handler"
            ExoRedis.Server.GenServerHandler,
            []
          ) do
       {:ok, pid} ->
-        Logger.info("Starting ranch @#{@listen_port} pid: #{inspect(pid)}")
+        Logger.info("Started listener @#{@listen_port} pid: #{inspect(pid)}")
         {:ok, pid}
 
       {:error, err_msg} ->

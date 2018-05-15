@@ -13,8 +13,11 @@ defmodule ExoRedis.StorageProcess do
     GenServer.call(__MODULE__, {:get, key})
   end
 
-  def put_data(key, value, ttl \\ [-1, 0]) do
-    GenServer.call(__MODULE__, {:put, key, value, ttl})
+  def put_data(key, value, ttl \\ [-1, 0], mode \\ :sync) do
+    case mode do
+      :sync -> GenServer.call(__MODULE__, {:put, key, value, ttl})
+      :async -> GenServer.cast(__MODULE__, {:put, key, value, ttl})
+    end
   end
 
   def purge_data(key) do
@@ -120,6 +123,14 @@ defmodule ExoRedis.StorageProcess do
     else
       {:reply, {:error, :not_found}, ets_table_name}
     end
+  end
+
+  def handle_cast(
+        {:put, key, value, ttl},
+        ets_table_name
+      ) do
+    handle_call({:put, key, value, ttl}, self(), ets_table_name)
+    {:noreply, ets_table_name}
   end
 
   def ttl_epoch([ttl_seconds, ttl_milli_seconds]),
