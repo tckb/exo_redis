@@ -1,10 +1,7 @@
 defmodule ExoRedis.Application do
   @moduledoc """
    This is main module for the application.
-
-
   """
-
   use Application
   require Logger
 

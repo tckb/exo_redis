@@ -1,4 +1,5 @@
 defmodule ExoRedis.Command.Process.RBTree do
+  alias ExoRedis.Server.Error
   use ExoRedis.Command.Process
   require Logger
   @wrong_type_error %Error{type: "Err", message: Error.err_msg(:wrong_type)}
@@ -11,7 +12,7 @@ defmodule ExoRedis.Command.Process.RBTree do
     add only one member, with no flag considered
     this might not guarentee O(log(n))
   """
-  def process_command_args("ZADD", [key, score, memeber | _]) do
+  def process_command_args(:zadd, [key, score, memeber | _]) do
     score = String.to_integer(score)
 
     case retrieve(key) do
@@ -32,12 +33,9 @@ defmodule ExoRedis.Command.Process.RBTree do
 
         case store(
                key,
-               key_sset
-               |> ZSet.zadd(score, memeber),
-               %{
-                 expiry: [-1, 0],
-                 flag: :set
-               }
+               key_sset |> ZSet.zadd(score, memeber),
+               expiry: {-1, 0},
+               flag: :set
              ) do
           {:error, :key_type_error} -> @wrong_type_error
           {:error, :flag_failed} -> :null_array
@@ -50,12 +48,9 @@ defmodule ExoRedis.Command.Process.RBTree do
       {:error, :key_missing} ->
         case store(
                key,
-               ZSet.new()
-               |> ZSet.zadd(score, memeber),
-               %{
-                 expiry: [-1, 0],
-                 flag: :set
-               }
+               ZSet.new() |> ZSet.zadd(score, memeber),
+               expiry: {-1, 0},
+               flag: :set
              ) do
           {:error, :key_type_error} ->
             @wrong_type_error
@@ -70,7 +65,7 @@ defmodule ExoRedis.Command.Process.RBTree do
     end
   end
 
-  def process_command_args("ZCOUNT", [key, min, max | _]) do
+  def process_command_args(:zcnt, [key, min, max | _]) do
     min = String.to_integer(min)
     max = String.to_integer(max)
 
@@ -87,7 +82,7 @@ defmodule ExoRedis.Command.Process.RBTree do
     end
   end
 
-  def process_command_args("ZCARD", [key | rest]) do
+  def process_command_args(:zcrd, [key | _rest]) do
     case retrieve(key) do
       {:ok, key_sset} ->
         key_sset
@@ -101,7 +96,7 @@ defmodule ExoRedis.Command.Process.RBTree do
     end
   end
 
-  def process_command_args("ZRANGE", [key, start, stop | _]) do
+  def process_command_args(:zrng, [key, start, stop | _]) do
     start = String.to_integer(start)
     stop = String.to_integer(stop)
 

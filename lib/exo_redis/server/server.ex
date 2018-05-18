@@ -1,8 +1,11 @@
 defmodule ExoRedis.ServerKickStarter do
-  use GenServer
-
+  @moduledoc """
+  the process responsible for kick starting the TCP server
+  """
   @listen_port Application.get_env(:exo_redis, :port)
   @connection_acceptor_pool_size Application.get_env(:exo_redis, :accept_pool)
+
+  use GenServer
   require Logger
 
   def start_link(state \\ []) do

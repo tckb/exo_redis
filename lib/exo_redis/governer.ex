@@ -1,15 +1,17 @@
 defmodule ExoRedis.Governer.Supervisor do
+  @moduledoc """
+  the main supervisor governing all the other process in the application
+  """
   use Supervisor
   @store_name :internal_store
 
-  def start_link(args) do
+  def start_link(_args) do
     Supervisor.start_link(__MODULE__, :ok, name: __MODULE__)
   end
 
-  def init(args) do
+  def init(_args) do
     children = [
-      {ExoRedis.Command.ProcessSupervisor,
-       strategy: :rest_for_one, restart: :permanent},
+      {ExoRedis.Command.ProcessSupervisor, strategy: :rest_for_one, restart: :permanent},
       Supervisor.Spec.worker(
         ExoRedis.ServerKickStarter,
         [],

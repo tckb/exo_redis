@@ -1,34 +1,85 @@
 defmodule ExoRedis.StorageProcess do
+  @moduledoc """
+   the storage process responsible for handling storing & retrieving data out of the internal storage.
+   the internal logistics of handling the actual data is opeque to the caller
+  """
+
+  @type ttl_type :: {-1 | pos_integer(), non_neg_integer()}
+  @type store_mode_type :: :sync | :async
+
   use GenServer
   require Logger
   @status_mark_for_eviction :to_be_evicted
   @status_alive :active
   @status_alive_perpetuity :active_until_dead
 
-  def start_link(state \\ []) do
-    GenServer.start_link(__MODULE__, state, name: __MODULE__)
-  end
+  ########
+  ## Client Apis
+  #######
 
+  @doc """
+   retrieves the data from internal storage, technically the key, and value can be an elixir terms
+
+   ## Examples
+        iex> ExoRedis.StorageProcess.put_data(:key1, "value1")
+        :ok
+        iex> ExoRedis.StorageProcess.get_data(:key1)
+        {:ok,"value1"}
+        iex> ExoRedis.StorageProcess.get_data(:key2)
+        {:error, :not_found}
+        iex> ExoRedis.StorageProcess.put_data({:key1,:key2}, [1,2,3,4,5])
+        :ok
+        iex> ExoRedis.StorageProcess.get_data({:key1,:key2})
+        {:ok,[1,2,3,4,5]}
+        iex> ExoRedis.StorageProcess.put_data(:self_pid, self())
+        :ok
+        iex> ExoRedis.StorageProcess.get_data(:self_pid)
+        {:ok, self()}
+
+  """
+  @spec get_data(any()) :: {:error, :not_found} | {:ok, any()}
   def get_data(key) do
     GenServer.call(__MODULE__, {:get, key})
   end
 
-  def put_data(key, value, ttl \\ [-1, 0], mode \\ :sync) do
+  @doc """
+    stores the data into the storage with optionally associating time-to-live associated with it.
+  """
+  @spec put_data(any(), any(), ttl_type, store_mode_type) :: :ok | {:error, :badvalue}
+  def put_data(key, value, ttl \\ {-1, 0}, mode \\ :sync) do
     case mode do
-      :sync -> GenServer.call(__MODULE__, {:put, key, value, ttl})
-      :async -> GenServer.cast(__MODULE__, {:put, key, value, ttl})
+      :async ->
+        GenServer.cast(__MODULE__, {:put, key, value, ttl})
+        :ok
+
+      _ ->
+        GenServer.call(__MODULE__, {:put, key, value, ttl})
     end
   end
 
+  @doc """
+   purges the data from the storage
+  """
+  @spec purge_data(any()) :: {:ok, true} | {:error, :not_found}
   def purge_data(key) do
     GenServer.call(__MODULE__, {:remove, key})
   end
 
+  @doc """
+  checks if the key is present in the storage
+  """
+  @spec is_key_present?(any()) :: {:ok, boolean()}
   def is_key_present?(key) do
     GenServer.call(__MODULE__, {:check_member, key})
   end
 
   ########
+  ## Internal Methods
+  #######
+
+  def start_link(arg \\ :internal_store) do
+    GenServer.start_link(__MODULE__, arg, name: __MODULE__)
+  end
 
   def init(ets_table_name) do
     # use ETS backed datastore, its easier for lookups
@@ -41,9 +92,6 @@ defmodule ExoRedis.StorageProcess do
     {:ok, ets_table_name}
   end
 
-  @doc """
-   for now, we follow a lazy cache cleaning
-  """
   def handle_call({:get, key}, _from, ets_table_name) do
     keyval = ets_get(ets_table_name, key)
 
@@ -84,11 +132,11 @@ defmodule ExoRedis.StorageProcess do
   end
 
   def handle_call(
-        {:put, key, value, [ttl_seconds, ttl_milli_seconds] = ttl},
+        {:put, key, value, {ttl_seconds, ttl_milli_seconds} = ttl},
         _from,
         ets_table_name
       )
-      when ttl_seconds > 0 and ttl_milli_seconds >= 0 do
+      when ttl_seconds >= 0 and ttl_milli_seconds >= 0 do
     ets_put!(ets_table_name, key, %{
       value: value,
       status: @status_alive,
@@ -98,7 +146,7 @@ defmodule ExoRedis.StorageProcess do
     {:reply, :ok, ets_table_name}
   end
 
-  def handle_call({:put, key, value, [_, _]}, _from, ets_table_name) do
+  def handle_call({:put, key, value, {_, _}}, _from, ets_table_name) do
     ets_put!(ets_table_name, key, %{
       value: value,
       status: @status_alive_perpetuity,
@@ -109,7 +157,7 @@ defmodule ExoRedis.StorageProcess do
   end
 
   def handle_call({:put, _, _, _}, _from, ets_table_name) do
-    {:reply, {:error, "bad value"}, ets_table_name}
+    {:reply, {:error, :badvalue}, ets_table_name}
   end
 
   def handle_call({:check_member, key}, _from, ets_table_name) do
@@ -133,7 +181,7 @@ defmodule ExoRedis.StorageProcess do
     {:noreply, ets_table_name}
   end
 
-  def ttl_epoch([ttl_seconds, ttl_milli_seconds]),
+  def ttl_epoch({ttl_seconds, ttl_milli_seconds}),
     do: :os.system_time(:milli_seconds) + ttl_seconds * 1000 + ttl_milli_seconds
 
   defp ets_get(db_ref, key) do

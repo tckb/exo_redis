@@ -1,8 +1,11 @@
 defmodule ExoRedis.Server.GenServerHandler do
-  require Logger
-  alias ExoRedis.Command.Handler, as: CmdHandler
-
+  @moduledoc """
+  the handler responsible for handling the incoming commands
+  """
   use GenServer
+  alias ExoRedis.Command.Handler
+  require Logger
+
   @behaviour :ranch_protocol
   @crlf "\r\n"
   @pong [43, "PONG", "\r\n"]
@@ -24,7 +27,7 @@ defmodule ExoRedis.Server.GenServerHandler do
         {:active, true},
         # enable TCP_NO_DELAY
         {:nodelay, true},
-        # enable SOCKET REUSEADDR 
+        # enable SOCKET REUSEADDR
         {:reuseaddr, true}
       ])
 
@@ -37,10 +40,7 @@ defmodule ExoRedis.Server.GenServerHandler do
   @doc """
      don't reply to empty lines
   """
-  def handle_info(
-        {:tcp, socket, @crlf},
-        %{socket: socket, transport: transport} = state
-      ) do
+  def handle_info({:tcp, _socket, @crlf}, state) do
     {:noreply, state}
   end
 
@@ -79,9 +79,7 @@ defmodule ExoRedis.Server.GenServerHandler do
       ) do
     Logger.debug(fn -> "received: #{inspect(input)}" end)
 
-    resp =
-      input
-      |> CmdHandler.process_command()
+    resp = Handler.process_command(input)
 
     Logger.debug(fn ->
       "#{inspect(input)} -> #{resp |> IO.iodata_to_binary() |> inspect}"

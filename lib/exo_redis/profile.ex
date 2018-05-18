@@ -1,4 +1,7 @@
 defmodule ExoRedis.Profile do
+  @moduledoc """
+   contains the stuff for profiling exo_redis. expect no docs!
+  """
   import ExProf.Macro
 
   def do_analyze do
@@ -107,15 +110,13 @@ defmodule ExoRedis.Profile do
   defp downcase_ascii(<<c, rest::bits>>, acc) when c >= ?A and c <= ?Z,
     do: downcase_ascii(rest, [c + 32 | acc])
 
-  defp downcase_ascii(<<c, rest::bits>>, acc),
-    do: downcase_ascii(rest, [c | acc])
+  defp downcase_ascii(<<c, rest::bits>>, acc), do: downcase_ascii(rest, [c | acc])
 
   defp downcase_ascii(<<>>, acc), do: IO.iodata_to_binary(:lists.reverse(acc))
 
   def downcase_ascii_iodata(x), do: IO.iodata_to_binary(do_dn4(x))
 
-  def do_dn4(<<x, rest::bits>>) when x >= ?A and x <= ?Z,
-    do: [x + 32 | do_dn4(rest)]
+  def do_dn4(<<x, rest::bits>>) when x >= ?A and x <= ?Z, do: [x + 32 | do_dn4(rest)]
 
   def do_dn4(<<x, rest::bits>>), do: [x | do_dn4(rest)]
   def do_dn4(<<>>), do: []

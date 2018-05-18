@@ -11,10 +11,7 @@ defmodule ExoRedis.Storage.RDB do
     # 1 byte
     @db_selector <<254::size(8)>>
 
-    def read_metadata(
-          <<@redis_signature, version::big-size(24), @db_selector,
-            actual_data::bitstring>>
-        ) do
+    def read_metadata(<<@redis_signature, _::big-size(24), @db_selector, _::bitstring>>) do
     end
   end
 end
