@@ -183,16 +183,18 @@ defmodule ExoRedis.Command.Process.Binary do
   defp get_bit(_, _), do: 0
 
   # no resizing needed here
+  # we'll be splitting the data by position
   defp set_bit(string_data, position, bit_flag)
        when (bit_flag == "1" or bit_flag == "0") and is_number(position) and
               is_binary(string_data) and position > 0 and
               position <= byte_size(string_data) * 8 do
-    <<head::size(position), old_bit::1, tail::bitstring>> = string_data
+    head_length = position - 1
+    <<head::size(head_length), old_bit::1, tail::bitstring>> = string_data
 
     if bit_flag == "1" do
-      {old_bit, <<head::size(position), 1::1, tail::bitstring>>}
+      {old_bit, <<head::size(head_length), 1::1, tail::bitstring>>}
     else
-      {old_bit, <<head::size(position), 0::1, tail::bitstring>>}
+      {old_bit, <<head::size(head_length), 0::1, tail::bitstring>>}
     end
   end
 
@@ -226,7 +228,6 @@ defmodule ExoRedis.Command.Process.Binary do
   end
 
   # append <<0>> bytes
-
   defp append_empty_bytes(original_data, total_bytes_to_append)
        when total_bytes_to_append > 0 do
     append_empty_bytes(
