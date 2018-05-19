@@ -45,7 +45,8 @@ defmodule ExoRedis.StorageProcess do
   @doc """
     stores the data into the storage with optionally associating time-to-live associated with it.
   """
-  @spec put_data(any(), any(), ttl_type, store_mode_type) :: :ok | {:error, :badvalue}
+  @spec put_data(any(), any(), ttl_type, store_mode_type) ::
+          :ok | {:error, :badvalue}
   def put_data(key, value, ttl \\ {-1, 0}, mode \\ :sync) do
     case mode do
       :async ->

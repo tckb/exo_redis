@@ -17,14 +17,12 @@ defmodule ExoRedis.Command.Handler do
   alias ExoRedis.Commands
 
   def process_command(raw_command) when is_binary(raw_command) do
-    try do
-      raw_command
-      |> parse_command
-      |> validate_command!()
-      |> Process.process_command()
-    rescue
-      error -> error |> pack_error()
-    end
+    raw_command
+    |> parse_command
+    |> validate_command!()
+    |> Process.process_command()
+  rescue
+    error -> error |> pack_error()
   end
 
   defp parse_command(raw_command) do
@@ -62,11 +60,17 @@ defmodule ExoRedis.Command.Handler do
              (!is_arg_required && args_length == min_args) do
           {process_module, redis_command(type: command_atom, args: args)}
         else
-          raise %Error{type: "Err", message: Error.err_msg(:wrong_args, command_string)}
+          raise %Error{
+            type: "Err",
+            message: Error.err_msg(:wrong_args, command_string)
+          }
         end
 
       {:error, :not_found} ->
-        raise %Error{type: "Err", message: Error.err_msg(:wrong_command, command_string)}
+        raise %Error{
+          type: "Err",
+          message: Error.err_msg(:wrong_command, command_string)
+        }
     end
   end
 

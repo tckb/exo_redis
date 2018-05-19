@@ -53,30 +53,31 @@ defmodule ExoRedis.Command.Process.Binary do
   end
 
   defp process_optional_flags(["EX", seconds, "PX", mills, flag]) do
-    try do
-      set_flags =
-        case flag do
-          "NX" -> :set_if_exists
-          "XX" -> :set_if_not_exists
-          _ -> :set
-        end
+    set_flags =
+      case flag do
+        "NX" -> :set_if_exists
+        "XX" -> :set_if_not_exists
+        _ -> :set
+      end
 
-      Logger.debug(fn ->
-        "process_optional_flags: EX: #{inspect(seconds)} PX: #{inspect(mills)}  flag: #{
-          inspect(flag)
-        } set_flags: #{set_flags}"
-      end)
+    Logger.debug(fn ->
+      "process_optional_flags: EX: #{inspect(seconds)} PX: #{inspect(mills)}  flag: #{
+        inspect(flag)
+      } set_flags: #{set_flags}"
+    end)
 
-      [expiry: {String.to_integer(seconds), String.to_integer(mills)}, flag: set_flags]
-    rescue
-      e in ArgumentError ->
-        Logger.debug(fn -> "Argument error: #{inspect(e)}" end)
+    [
+      expiry: {String.to_integer(seconds), String.to_integer(mills)},
+      flag: set_flags
+    ]
+  rescue
+    e in ArgumentError ->
+      Logger.debug(fn -> "Argument error: #{inspect(e)}" end)
 
-        %Error{
-          type: "Err",
-          message: Error.err_msg(:wrong_syntax)
-        }
-    end
+      %Error{
+        type: "Err",
+        message: Error.err_msg(:wrong_syntax)
+      }
   end
 
   defp process_optional_flags(["EX", seconds, "PX", mills]) do
@@ -103,21 +104,19 @@ defmodule ExoRedis.Command.Process.Binary do
   def process_command_args(:gbit, [key, position | _]) do
     Logger.debug(fn -> "getbit" <> key <> position end)
 
-    try do
-      position = String.to_integer(position)
+    position = String.to_integer(position)
 
-      case retrieve(key) do
-        {:ok, data} -> get_bit(data, position)
-        {:error, :key_type_error} -> @wrong_type_error
-        {:error, :key_missing} -> :nodata
-      end
-    rescue
-      ArgumentError ->
-        %Error{
-          type: "Err",
-          message: Error.err_msg(:out_of_range, "bit offset")
-        }
+    case retrieve(key) do
+      {:ok, data} -> get_bit(data, position)
+      {:error, :key_type_error} -> @wrong_type_error
+      {:error, :key_missing} -> :nodata
     end
+  rescue
+    ArgumentError ->
+      %Error{
+        type: "Err",
+        message: Error.err_msg(:out_of_range, "bit offset")
+      }
   end
 
   def process_command_args(:gbit, [_]) do
@@ -129,43 +128,41 @@ defmodule ExoRedis.Command.Process.Binary do
 
   def process_command_args(:sbit, [key, position, flag | _])
       when flag == "1" or flag == "0" do
-    try do
-      position = String.to_integer(position)
+    position = String.to_integer(position)
 
-      case retrieve(key) do
-        {:ok, data} ->
-          {old_bit, new_data} = set_bit(data, position, flag)
+    case retrieve(key) do
+      {:ok, data} ->
+        {old_bit, new_data} = set_bit(data, position, flag)
 
-          case store(key, new_data) do
-            {:error, some_error} ->
-              %Error{type: "Err", message: some_error}
+        case store(key, new_data) do
+          {:error, some_error} ->
+            %Error{type: "Err", message: some_error}
 
-            {:ok, _} ->
-              old_bit
-          end
+          {:ok, _} ->
+            old_bit
+        end
 
-        {:error, :key_type_error} ->
-          @wrong_type_error
+      {:error, :key_type_error} ->
+        @wrong_type_error
 
-        {:error, :key_missing} ->
-          # allocate 1 byte for new data so that we don't need resizing for every bit
-          {old_bit, new_data} = set_bit(<<0::size(8)>>, position, flag)
+      {:error, :key_missing} ->
+        # allocate 1 byte for new data so that we don't need resizing for every bit
+        {old_bit, new_data} = set_bit(<<0::size(8)>>, position, flag)
 
-          case store(key, new_data) do
-            {:error, some_error} ->
-              %Error{type: "Err", message: some_error}
+        case store(key, new_data) do
+          {:error, some_error} ->
+            %Error{type: "Err", message: some_error}
 
-            {:ok, _} ->
-              old_bit
-          end
-      end
-    rescue
-      ArgumentError ->
-        %Error{
-          type: "Err",
-          message: Error.err_msg(:out_of_range, "bit offset")
-        }
+          {:ok, _} ->
+            old_bit
+        end
     end
+  rescue
+    ArgumentError ->
+      %Error{
+        type: "Err",
+        message: Error.err_msg(:out_of_range, "bit offset")
+      }
   end
 
   def process_command_args(:sbit, [_]) do

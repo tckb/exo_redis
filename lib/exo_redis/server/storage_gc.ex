@@ -53,7 +53,9 @@ defmodule ExoRedis.StorageProcess.GC do
   defp do_sweep(ets_table, keys_to_sweep \\ nil) do
     case keys_to_sweep do
       nil ->
-        Logger.debug(fn -> "sweep started @ #{:os.system_time(:milli_seconds)}" end)
+        Logger.debug(fn ->
+          "sweep started @ #{:os.system_time(:milli_seconds)}"
+        end)
 
         do_sweep(ets_table, :ets.select(ets_table, @expired_keys_selector))
 
@@ -64,14 +66,19 @@ defmodule ExoRedis.StorageProcess.GC do
         do_sweep(ets_table, rest)
 
       [] ->
-        Logger.debug(fn -> "sweep completed @ #{:os.system_time(:milli_seconds)}" end)
+        Logger.debug(fn ->
+          "sweep completed @ #{:os.system_time(:milli_seconds)}"
+        end)
     end
   end
 
   defp do_fullscan_mark(ets_table, key_with_epoch \\ nil) do
     case key_with_epoch do
       nil ->
-        Logger.debug(fn -> "marking started @ #{:os.system_time(:milli_seconds)}" end)
+        Logger.debug(fn ->
+          "marking started @ #{:os.system_time(:milli_seconds)}"
+        end)
+
         do_fullscan_mark(ets_table, :ets.select(ets_table, @live_key_selector))
 
       [{key_to_mark, value, ttl_epoch} | rest] ->
@@ -91,7 +98,9 @@ defmodule ExoRedis.StorageProcess.GC do
         do_fullscan_mark(ets_table, rest)
 
       [] ->
-        Logger.debug(fn -> "mark completed @ #{:os.system_time(:milli_seconds)}" end)
+        Logger.debug(fn ->
+          "mark completed @ #{:os.system_time(:milli_seconds)}"
+        end)
     end
   end
 

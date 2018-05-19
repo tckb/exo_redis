@@ -153,7 +153,8 @@ defmodule ExoRedis.RESP do
          when digit in ?0..?9,
          do: parse_integer_digits(rest, acc * 10 + (digit - ?0))
 
-    defp parse_integer_digits(<<_non_digit, _::binary>> = rest, acc), do: {:ok, acc, rest}
+    defp parse_integer_digits(<<_non_digit, _::binary>> = rest, acc),
+      do: {:ok, acc, rest}
 
     defp parse_integer_digits(<<>>, acc),
       do: {:continuation, &parse_integer_digits(&1, acc)}
@@ -213,7 +214,8 @@ defmodule ExoRedis.RESP do
       {:continuation, &take_elems(&1, n, acc)}
     end
 
-    defp resolve_cont({:ok, val, rest}, ok) when is_function(ok, 2), do: ok.(val, rest)
+    defp resolve_cont({:ok, val, rest}, ok) when is_function(ok, 2),
+      do: ok.(val, rest)
 
     defp resolve_cont({:continuation, cont}, ok),
       do: {:continuation, fn new_data -> resolve_cont(cont.(new_data), ok) end}

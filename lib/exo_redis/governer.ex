@@ -11,7 +11,8 @@ defmodule ExoRedis.Governer.Supervisor do
 
   def init(_args) do
     children = [
-      {ExoRedis.Command.ProcessSupervisor, strategy: :rest_for_one, restart: :permanent},
+      {ExoRedis.Command.ProcessSupervisor,
+       strategy: :rest_for_one, restart: :permanent},
       Supervisor.Spec.worker(
         ExoRedis.ServerKickStarter,
         [],

@@ -27,13 +27,15 @@ defmodule ExoRedis.Command.Process do
       end
 
       def handle_call(
-            {:command_invoked, redis_command(type: command_type, args: command_args)},
+            {:command_invoked,
+             redis_command(type: command_type, args: command_args)},
             _from,
             state
           ) do
         {
           :reply,
-          __MODULE__.process_command_args(command_type, command_args)
+          command_type
+          |> __MODULE__.process_command_args(command_args)
           |> __MODULE__.pack_response(),
           state
         }
@@ -49,7 +51,9 @@ defmodule ExoRedis.Command.Process do
 
       defp do_store(key, data, ttl, set_flag) do
         Logger.debug(fn ->
-          "store: #{key} -> #{inspect(data)} expiry: #{inspect(ttl)} :: #{set_flag}"
+          "store: #{key} -> #{inspect(data)} expiry: #{inspect(ttl)} :: #{
+            set_flag
+          }"
         end)
 
         case set_flag do

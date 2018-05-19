@@ -28,13 +28,11 @@ defmodule ExoRedis.Commands do
        iex> ExoRedis.Commands.command_spec("GET")
        {:error, :not_found}
   """
-  @spec command_spec(String.t()) :: c_spec_t | {:error, :not_found}
+  @spec command_spec(String.t()) :: {:ok, c_spec_t} | {:error, :not_found}
   def command_spec(command) when is_binary(command) do
-    try do
-      %{^command => spec} = @up_table
-      {:ok, spec}
-    rescue
-      MatchError -> {:error, :not_found}
-    end
+    %{^command => spec} = @up_table
+    {:ok, spec}
+  rescue
+    MatchError -> {:error, :not_found}
   end
 end

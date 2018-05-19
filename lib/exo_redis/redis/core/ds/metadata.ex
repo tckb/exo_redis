@@ -4,6 +4,7 @@ defmodule ExoRedis.Command.Process.Info do
   def process_command_args(_, _) do
     {:ok, version} = :application.get_key(:exo_redis, :vsn)
 
-    [{:exo_redis_version, to_string(version)}] ++ Application.get_all_env(:exo_redis)
+    [{:exo_redis_version, to_string(version)}] ++
+      Application.get_all_env(:exo_redis)
   end
 end

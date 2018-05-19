@@ -10,7 +10,6 @@ defmodule ExoRedis.Command.Process.RBTree do
 
   @doc """
     add only one member, with no flag considered
-    this might not guarentee O(log(n))
   """
   def process_command_args(:zadd, [key, score, memeber | _]) do
     score = String.to_integer(score)
@@ -37,7 +36,6 @@ defmodule ExoRedis.Command.Process.RBTree do
                expiry: {-1, 0},
                flag: :set
              ) do
-          {:error, :key_type_error} -> @wrong_type_error
           {:error, :flag_failed} -> :null_array
           {:ok, _} -> return
         end
