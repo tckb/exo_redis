@@ -5,13 +5,18 @@ defmodule ExoRedis.BasicTests do
   alias ExoRedis.RESP.BinaryPacker
   alias ExoRedis.RESP.Parser
   alias ExoRedis.Command.Handler
+  alias ExoRedis.Util
 
   doctest ExoRedis.Util
   doctest ExoRedis.StorageProcess
   doctest ExoRedis.Commands
 
-  test "sampleTest" do
-    assert ExoRedis.Util.downcase_ascii("string") == "string"
+  test "util test" do
+    assert Util.downcase_ascii("ABCD") == "abcd"
+    assert Util.downcase_ascii("aBCd") == "abcd"
+    assert Util.downcase_ascii("abcd") == "abcd"
+    assert Util.downcase_ascii("_$123ABC_") == "_$123abc_"
+    assert Util.downcase_ascii("") == ""
   end
 
   test "cache expiry" do
@@ -29,15 +34,12 @@ defmodule ExoRedis.BasicTests do
     # => 01000001 => "A"
     assert send_get_response(["set", "k1", "A"]) == {:ok, "OK", ""}
     assert send_get_response(["get", "k1"]) == {:ok, "A", ""}
-
     # => 01100001 => "a"
     assert send_get_response(["setbit", "k1", "3", "1"]) == {:ok, 0, ""}
     assert send_get_response(["get", "k1"]) == {:ok, "a", ""}
-
     # => 01110001 => "q"
     assert send_get_response(["setbit", "k1", "4", "1"]) == {:ok, 0, ""}
     assert send_get_response(["get", "k1"]) == {:ok, "q", ""}
-
     # 😈  =>11110000 10011111 10011000 10001000
     assert send_get_response(["set", "k1", "😈"]) == {:ok, "OK", ""}
     assert send_get_response(["get", "k1"]) == {:ok, "😈", ""}
