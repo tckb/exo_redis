@@ -1,9 +1,13 @@
 defmodule ExoRedis.RESP do
   defmodule ProtocolError do
+    @type t :: %__MODULE__{message: String.t()}
     defexception [:message]
   end
 
   defmodule BinaryPacker do
+    @moduledoc """
+    the module responsible for packing the elixir terms to RESP data
+    """
     # data type prefixes
     @binary_prefix ?+
     @int_prefix ?:
@@ -18,8 +22,29 @@ defmodule ExoRedis.RESP do
     # null array reply - this is legacy format
     @null_array_reply [@array_prefix, "-1", @crlf]
 
+    @doc """
+    the response for 'null bulk'
+    """
     def nodata_reply, do: @nodata_reply
+
+    @doc """
+    the response for 'nil'
+    """
     def null_array_reply, do: @null_array_reply
+
+    @type el_term ::
+            boolean()
+            | integer()
+            | binary()
+            | maybe_improper_list()
+            | ExoRedis.RESP.ProtocolError.t()
+            | ExoRedis.Server.Error.t()
+
+    @doc """
+     packs the given term to iolist of "RESP"-packed data
+    """
+    @spec pack(el_term()) :: iolist() | ExoRedis.RESP.ProtocolError.t()
+    def pack(term)
 
     def pack(simple_boolean) when is_boolean(simple_boolean) do
       if simple_boolean do
@@ -84,7 +109,28 @@ defmodule ExoRedis.RESP do
   end
 
   defmodule Parser do
+    @moduledoc """
+    the module responsible to "RESP" packed data to elixir terms
+    """
     @crlf "\r\n"
+
+    @type el_term ::
+            boolean()
+            | integer()
+            | binary()
+            | maybe_improper_list()
+            | ExoRedis.Server.Error.t()
+            | ExoRedis.RESP.ProtocolError.t()
+
+    @doc """
+     parses the "RESP"-data to list of commands
+    """
+    @spec parse(binary()) ::
+            {:ok, command_args :: list(String.t()), remaining :: String.t()}
+            | {:ok, only_command :: String.t(), remaining :: String.t()}
+            | {:continuation, parsed_data :: String.t()}
+            | {:error, ExoRedis.RESP.ProtocolError.t()}
+    def parse(term)
 
     def parse("+" <> rest), do: parse_simple_string(rest)
     def parse("-" <> rest), do: parse_error(rest)
@@ -99,8 +145,6 @@ defmodule ExoRedis.RESP do
          message: ExoRedis.Server.Error.err_msg(:wrong_command, rest)
        }}
     end
-
-    # Type parsers
 
     defp parse_simple_string(data) do
       until_crlf(data)

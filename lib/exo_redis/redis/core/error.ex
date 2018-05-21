@@ -1,5 +1,6 @@
 defmodule ExoRedis.Server.Error do
   defexception [:type, :message]
+  @type t :: %__MODULE__{type: binary(), message: binary()}
 
   @wrong_type "WRONGTYPE Operation against a key holding the wrong kind of value"
   @wrong_args "wrong number of arguments for '"

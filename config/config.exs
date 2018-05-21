@@ -11,7 +11,4 @@ config :exo_redis,
   gc_mark_cycle: 500_000,
   gc_sweep_cycle: 300_000
 
-config :logger,
-  level: :error,
-  backends: [:console],
-  compile_time_purge_level: :error
+import_config "#{Mix.env()}.exs"

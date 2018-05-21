@@ -4,10 +4,6 @@ defmodule ExoRedis.Command.Process.RBTree do
   require Logger
   @wrong_type_error %Error{type: "Err", message: Error.err_msg(:wrong_type)}
 
-  def init(args) do
-    {:ok, args}
-  end
-
   @doc """
     add only one member, with no flag considered
   """

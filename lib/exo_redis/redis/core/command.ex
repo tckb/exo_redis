@@ -6,21 +6,27 @@ defmodule ExoRedis.Command do
 end
 
 defmodule ExoRedis.Command.Handler do
+  @moduledoc """
+  the main "handler" for the processing raw redis command
+  """
   import ExoRedis.Command
   require Logger
   alias ExoRedis.RESP.BinaryPacker
   alias ExoRedis.RESP.ProtocolError
-  alias ExoRedis.Command.Process
   alias ExoRedis.RESP.Parser
   alias ExoRedis.Server.Error
   alias ExoRedis.Util
   alias ExoRedis.Commands
 
+  @doc """
+  process the raw command  by parsing the raw command and packing the response
+  """
+  @spec process_command(raw_command :: binary()) :: raw_response :: binary()
   def process_command(raw_command) when is_binary(raw_command) do
     raw_command
     |> parse_command
     |> validate_command!()
-    |> Process.process_command()
+    |> call_command()
   rescue
     error -> error |> pack_error()
   end
@@ -78,6 +84,14 @@ defmodule ExoRedis.Command.Handler do
     raise some_error
   end
 
+  defp call_command({process_mod, redis_command() = process_command}) do
+    Logger.debug(fn ->
+      "call_command #{inspect(process_mod)} #{inspect(process_command)}"
+    end)
+
+    GenServer.call(process_mod, {:command_invoked, process_command})
+  end
+
   defp pack_error(%ProtocolError{} = err) do
     BinaryPacker.pack(err)
   end
@@ -88,7 +102,6 @@ defmodule ExoRedis.Command.Handler do
 
   defp pack_error(some_error) do
     Logger.error(fn -> "Unexpected error  #{inspect(some_error)}" end)
-
-    %Error{type: "Err", message: "Unexpected error"} |> pack_error
+    pack_error(%Error{type: "Err", message: "Unexpected error"})
   end
 end

@@ -2,21 +2,17 @@ defmodule ExoRedis.Command.Process.Binary do
   @moduledoc """
    Handles all the operations for handling binary data (utf8 binaries)
   """
+  alias ExoRedis.Command.Process
+  alias ExoRedis.Server.Error
 
-  use ExoRedis.Command.Process
   use Bitwise
-  use Alias
+  use Process
   require Logger
 
   @wrong_type_error %Error{type: "Err", message: Error.err_msg(:wrong_type)}
   @ok "OK"
 
-  def init(args) do
-    {:ok, args}
-  end
-
   ####### Retrieval Operations
-
   def process_command_args(:get, [key | _]) do
     case retrieve(key) do
       {:ok, data} ->

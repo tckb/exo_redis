@@ -4,7 +4,7 @@ defmodule ExoRedis.Mixfile do
   def project do
     [
       app: :exo_redis,
-      version: "0.1.1",
+      version: "0.1.2",
       elixir: "~> 1.5",
       build_embedded: Mix.env() == :prod,
       start_permanent: Mix.env() == :prod,
@@ -12,7 +12,6 @@ defmodule ExoRedis.Mixfile do
     ]
   end
 
-  # Run "mix help compile.app" to learn about applications.
   def application do
     [
       extra_applications: [:logger, :ranch],
@@ -20,19 +19,16 @@ defmodule ExoRedis.Mixfile do
     ]
   end
 
-  # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
       {:ranch, "~> 1.5", override: true},
       {:bitmap, "~> 1.0.1"},
       {:zset, "~> 0.1.0"},
-      {:credo, "~> 0.9.1", only: [:dev, :test], runtime: false},
+      {:xxhash, "~> 0.2.0", hex: :erlang_xxhash},
       {:distillery, "~> 1.5", runtime: false},
-      {:exprof, "~> 0.2.3", runtime: false},
-      {:benchee, "~> 0.13.0", runtime: false},
-      {:benchee_html, "~> 0.4", only: :dev},
-      {:benchwarmer, "~> 0.0.2", runtime: false},
-      {:xxhash, "~> 0.2.0", hex: :erlang_xxhash}
+      {:credo, "~> 0.9.1", only: [:dev, :test], runtime: false},
+      {:exprof, "~> 0.2.3", only: [:dev, :test], runtime: false},
+      {:benchee, "~> 0.13.0", only: [:dev, :test], runtime: false}
     ]
   end
 end

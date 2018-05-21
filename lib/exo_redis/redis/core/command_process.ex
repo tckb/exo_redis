@@ -1,29 +1,27 @@
 defmodule ExoRedis.Command.Process do
+  @moduledoc """
+    defines the behaviour of a redis command process
+  """
   require Logger
   import ExoRedis.Command
   alias ExoRedis.StorageProcess
   alias ExoRedis.RESP.BinaryPacker
 
-  ####### Client Apis
-
-  def process_command({process_mod, redis_command() = process_command}) do
-    Logger.debug(fn ->
-      "process_command #{inspect(process_mod)} #{inspect(process_command)}"
-    end)
-
-    GenServer.call(process_mod, {:command_invoked, process_command})
-  end
-
-  ## macro starts
-  @callback process_command_args(list(any())) :: any()
+  @callback process_command_args(command :: atom(), command_args :: list(any())) ::
+              response :: any()
 
   defmacro __using__(_) do
     quote do
       use GenServer
       require Logger
+      @behaviour ExoRedis.Command.Process
 
       def start_link(state \\ []) do
         GenServer.start_link(__MODULE__, state, name: __MODULE__)
+      end
+
+      def init(args) do
+        {:ok, args}
       end
 
       def handle_call(
