@@ -28,7 +28,8 @@ defmodule ExoRedis.Mixfile do
       {:distillery, "~> 1.5", runtime: false},
       {:credo, "~> 0.9.1", only: [:dev, :test], runtime: false},
       {:exprof, "~> 0.2.3", only: [:dev, :test], runtime: false},
-      {:benchee, "~> 0.13.0", only: [:dev, :test], runtime: false}
+      {:benchee, "~> 0.13.0", only: [:dev, :test], runtime: false},
+      {:ex_doc, "~> 0.16", only: :dev, runtime: false}
     ]
   end
 end
