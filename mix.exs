@@ -26,8 +26,8 @@ defmodule ExoRedis.Mixfile do
       {:zset, "~> 0.1.0"},
       {:xxhash, "~> 0.2.0", hex: :erlang_xxhash},
       {:distillery, "~> 1.5", runtime: false},
+      {:exprof, "~> 0.2.3", runtime: false},
       {:credo, "~> 0.9.1", only: [:dev, :test], runtime: false},
-      {:exprof, "~> 0.2.3", only: [:dev, :test], runtime: false},
       {:benchee, "~> 0.13.0", only: [:dev, :test], runtime: false},
       {:ex_doc, "~> 0.16", only: :dev, runtime: false}
     ]
